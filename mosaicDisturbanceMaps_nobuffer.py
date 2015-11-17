@@ -10,6 +10,7 @@ import random
 TSA_MASKS = "/vol/v1/general_files/datasets/spatial_data/us_contiguous_tsa_masks_nobuffer/us_contiguous_tsa_nobuffer_{0}.bsq"
 
 def readDefaults(defaultFile):
+	'''extract parameters from a parameter file'''
 	out_dict = {}
 	f = open(defaultFile)
 	for line in f:
@@ -36,6 +37,7 @@ def getDirectories(roots, searchDir, pathrows):
 	return out_list 
 	
 def searchDirectory(directory, search_strings):
+	'''search a directory for list of files using search strings'''
 	local_files = []
 	print '\nSearching directory '
 	print directory
@@ -50,22 +52,24 @@ def searchDirectory(directory, search_strings):
 
 				for search in search_strings:
 					if fnmatch.fnmatch(f,search): local_files.append(os.path.join(path, f))
+					
 				#now cull out the bad matches
 				for search in search_strings:
 					if search[0] == "!":
-						#import pdb; pdb.set_trace()
+
 						if fnmatch.fnmatch(f, search[1:]):
-			   				#import pdb; pdb.set_trace()
+
 			   				if os.path.join(path, f) in local_files:
 			   					local_files.remove(os.path.join(path, f))
 
-				#if go_ahead: local_files.append(path + "/" + f)
 	for item in sorted(local_files):
 		print os.path.basename(item)
-	#import pdb; pdb.set_trace()
+
 	return local_files
 
 def createMosaic(files, bands, outputFile):
+	'''generate a mosaic from a list of rasters and bands'''
+
 	print '\nCreating mosaic'
 	print 'from files' 
 	for f in files:
@@ -93,6 +97,7 @@ def createMosaic(files, bands, outputFile):
 	print "Created {0}".format(outputFile)
 	
 def parsePathrow(combos):
+	'''create a list of 6-digit TSAs from a string of TSA combos'''
 	scenes = []
 	for combo in combos:
 		paths, rows = combo.split("/")
@@ -107,6 +112,7 @@ def parsePathrow(combos):
 	return scenes
 
 def checkFoundFiles(files, pathrows, outputFile):
+	'''Print list of rasters to be mosaics and any conflicts'''
 	newfile = outputFile + "_meta.txt"
 	g = open(newfile, "wb")
 	g.write("Scenes and files included in mosaic:\n")
@@ -123,27 +129,8 @@ def checkFoundFiles(files, pathrows, outputFile):
 		g.write(outstring)
 	g.close()
 	
-# def maskBuffers(files, bands, outputDir):
-# 	nobuffer_files = [[] for i in bands]
-# 	for ind,b in enumerate(bands):
-# 		for f in files:
-# 			scene = f.split('/')[f.split('/').index('scenes')+1]
-# 			mask = TSA_MASKS.format(scene)
-# 		
-# 			print "\nMasking buffer for: ", f
-# 			print "Band ", b 
-# 			for ind,b in enumerate(bands):
-# 				output = os.path.join(outputDir, os.path.splitext(os.path.basename(f))[0] + "_nobuff_band{0}.bsq".format(b))
-# 				statement = "intersectMask {0} {1} {2} --src_band={3} --meta='Temp file made from mosaicDisturbanceMaps_nobuffer.py'".format(f, mask, output, b)
-# 				os.system(statement)
-# 				if os.path.exists(output):
-# 					nobuffer_files[ind].append(output)
-# 				else:
-# 					print sys.exit("Buffer masking failed: " + f + "\n Exiting.")
-# 
-# 	return nobuffer_files
-	
 def maskBuffers(files, outputDir):
+	'''mask buffers of list of rasters using TSA_MASKS'''
 	nobuffer_files = []
 	for f in files:
 		scene = f.split('/')[f.split('/').index('scenes')+1]
@@ -161,58 +148,19 @@ def maskBuffers(files, outputDir):
 
 	return nobuffer_files
 
-# def createMosaicGDALMERGE(nobuffer_files, outputFile):
-# 	#print processes
-# 	print '\nCreating mosaic'
-# 	print 'from files'
-# 	for b in nobuffer_files: 
-# 		for f in b:
-# 			print os.path.basename(f)
-# 
-# 	#create mosaic for each band
-# 	bnd_files = []
-# 	for ind,i in enumerate(nobuffer_files):
-# 		bnd_output = os.path.splitext(outputFile)[0] + "_bnd{0}.bsq".format(str(ind+1))
-# 		statement = "gdal_merge.py -o {0} -of ENVI -n 0 -init 0 -a_nodata 0 {1}".format(bnd_output, " ".join(i))
-# 		os.system(statement)
-# 		if os.path.exists(bnd_output):
-# 			bnd_files.append(bnd_output)
-# 			for tmp in i: 
-# 				try:
-# 					print "Cleaning up: ", tmp
-# 					os.remove(tmp) #cleanup
-# 					os.remove(os.path.splitext(tmp)[0]+".hdr")
-# 					os.remove(os.path.splitext(tmp)[0]+"_meta.txt")
-# 				except OSError:
-# 					continue
-# 		else:
-# 			sys.exit("Band {0} mosaic failed. \nExiting.".format(str(ind)))
-# 
-# 	#stack mosaics from each band
-# 	statement = "gdal_merge.py -o {0} -of ENVI -a_nodata 0 -separate {1}".format(outputFile + ".bsq", " ".join(bnd_files))
-# 	print statement
-# 	os.system(statement)
-# 	if os.path.exists(outputFile + ".bsq"): 
-# 		for tmp in bnd_files: 
-# 			try:
-# 				print "Cleaning up: ", tmp
-# 				os.remove(tmp) #cleanup
-# 				os.remove(os.path.splitext(tmp)[0]+".hdr")
-# 				os.remove(os.path.splitext(tmp)[0]+".bsq.aux.xml")
-# 			except OSError:
-# 				continue
-# 		print "Created {0}".format(outputFile + ".bsq")	
-
 						
 def main(inputParams):
 	#extract parameters
 	for var in inputParams: exec "{0} = {1}".format(var, inputParams[var])
+	
+	#create output directory if it doesn't exist
 	if not os.path.exists(outputDir): os.mkdir(outputDir)
 	os.chdir(outputDir)
 	outputFile = os.path.join(outputDir,outMosaic)
+	
+	#parse path-rows and create a list of rasters to mosaic
 	all_files = []
 	pathRows = parsePathrow(pathRows)
-	#import pdb; pdb.set_trace()
 	for directory in getDirectories(rootDir, searchDir, pathRows):
 		for f in searchDirectory(directory, searchStrings):
 			all_files.append(f)
@@ -220,6 +168,8 @@ def main(inputParams):
 
 	#mask out buffers
 	nobuffer_files = maskBuffers(all_files, outputDir)
+	
+	#create mosaic from masked rasters
 	createMosaic(nobuffer_files, bands, outputFile)
 	
 	#clean up
@@ -230,7 +180,6 @@ def main(inputParams):
 		os.remove(f.replace('.bsq','_meta.txt'))
 	print " Done!"
 		
-	# createMosaicGDALMERGE(nobuffer_files, outputFile)
 			
 if __name__ == '__main__':
 	defaultFile = sys.argv[1]
