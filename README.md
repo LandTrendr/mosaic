@@ -13,6 +13,8 @@ To run:
 
 2. Run *"python mosaicDisturbanceMaps_nobuffer.py [path_to_parameter_file]"*
 
+Dependency: LandTrendr ltutilites - https://github.com/LandTrendr/ltutilities
+
 
 
 
