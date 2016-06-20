@@ -16,6 +16,7 @@ To run:
 2. Run *"python mosaicDisturbanceMaps_nobuffer.py [path_to_parameter_file]"*
 
 
+#####Full Documentation for all scripts can be found here: https://drive.google.com/open?id=1CR_AYi5JyvdlgARH-1tgLwKp7l6cxrbLDTHst8HxZLA
 
 
 
