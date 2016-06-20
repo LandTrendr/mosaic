@@ -1,4 +1,5 @@
-'''loopStacks.py
+'''
+loopStacks.py
 
 Inputs:
 	- starting parameter files (year/band does not need to be filled out)
@@ -12,9 +13,7 @@ Outputs:
 '''
 import sys, os
 import stackMosaics as stack
-from lthacks import *
-
-SCRIPT_LAST_UPDATED = "09/10/2015"
+from lthacks.lthacks import *
 
 def parseYearRange(yrange):
 	ends = yrange.strip().split("-")
@@ -30,11 +29,13 @@ def main(listOfParams, yearRange, outputDir, outputPrefix):
 	
 	years = parseYearRange(yearRange)
 	
+	this_script = os.path.abspath(__file__)
+	
 	for y in years:
 		outpath = os.path.join(outdir, outputPrefix + "_" + str(y) + ".bsq")
 		stack.main(params, outpath, yearOverride=y)
 	
-		createMetadata(sys.argv, outpath, lastCommit=SCRIPT_LAST_UPDATED)
+		createMetadata(sys.argv, outpath, lastCommit=getLastCommit(this_script))
 	
 if __name__ == '__main__':
 	args = sys.argv

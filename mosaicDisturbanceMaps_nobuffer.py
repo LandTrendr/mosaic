@@ -6,6 +6,7 @@
 
 import sys, os, fnmatch
 import random
+from lthacks.lthacks import *
 
 TSA_MASKS = "/vol/v1/general_files/datasets/spatial_data/us_contiguous_tsa_masks_nobuffer/us_contiguous_tsa_nobuffer_{0}.bsq"
 
@@ -19,19 +20,30 @@ def readDefaults(defaultFile):
 			out_dict[input_vars[1].replace(" ", "")] =\
 			r'"{0}"'.format(input_vars[2].replace(" ", "").replace("\n", ""))
 	f.close()
+	
+	#modify if not pathrow argument (not mosaicking from scenes directories)
+
 	# Specific formatting
 	for key in 'searchStrings', 'pathRows', 'bands', 'searchDir', 'rootDir':
-		out_dict[key] = out_dict[key].strip("\"").rstrip("\n").split(",")
+		try:
+			out_dict[key] = out_dict[key].strip("\"").rstrip("\n").split(",")
+		except KeyError:
+			if key == 'pathRows':
+				out_dict[key] = None
+			else:
+				raise KeyError
+		
 	return out_dict
 
 def getDirectories(roots, searchDir, pathrows):
+	'''creates a list of directories'''
 	out_list = []
 	print '\n\nFinding directories'
 	print '{0} in {1}'.format(', '.join(searchDir), ', '.join(roots))
 	for pathrow in pathrows:
 		for root in roots:
 			for d in searchDir:
-				new_folder = os.path.join(root, pathrow, d) #Changed this b/c I felt it was less error prone -Jamie#"{0}/{1}/{2}".format(root, pathrow, d)
+				new_folder = os.path.join(root, pathrow, d) 
 				if os.path.exists(new_folder):
 					out_list.append(new_folder)
 	return out_list 
@@ -70,13 +82,14 @@ def searchDirectory(directory, search_strings):
 def createMosaic(files, bands, outputFile):
 	'''generate a mosaic from a list of rasters and bands'''
 
+	bands = [str(b) for b in bands]
+
 	print '\nCreating mosaic'
-	print 'from files' 
+	print 'from {0} files'.format(str(len(files)))
 	for f in files:
 		print os.path.basename(f)
 	print 'and bands: {0}'.format(', '.join(bands))
-	#print bands
-	#import pdb; pdb.set_trace()
+
 	run_id = str(random.randint(0, 1000))
 	exec_string = "gdalbuildvrt -srcnodata 0 {0}.vrt ".format(outputFile)
 	for f in files: exec_string += "{0} ".format(f)
@@ -86,11 +99,13 @@ def createMosaic(files, bands, outputFile):
 	cleanup = ['temp_stack_{0}.vrt'.format(run_id)]
 	for band in bands:
 		newfile = "ts_{0}_{1}.vrt".format(band, run_id)
-		os.system("gdal_translate -of VRT -b {0} -a_nodata 0 {1}.vrt {2}".format(band, outputFile, newfile))
+		os.system("gdal_translate -of VRT -b {0} -a_nodata 0 {1}.vrt {2}".format(band, 
+		outputFile, newfile))
 		selected_bands += newfile + " "
 		cleanup.append(newfile)
 	os.system(selected_bands)
-	os.system("gdal_translate -of ENVI -a_nodata 0 temp_stack_{1}.vrt {0}.bsq".format(outputFile, run_id))
+	os.system("gdal_translate -of ENVI -a_nodata 0 temp_stack_{1}.vrt {0}.bsq".format(outputFile, 
+	run_id))
 	for f in cleanup:
 		try: os.remove(f)
 		except: pass
@@ -129,16 +144,41 @@ def checkFoundFiles(files, pathrows, outputFile):
 		g.write(outstring)
 	g.close()
 	
-def maskBuffers(files, outputDir):
+def maskBuffers(files, outputDir, sceneIndex=None):
 	'''mask buffers of list of rasters using TSA_MASKS'''
 	nobuffer_files = []
 	for f in files:
-		scene = f.split('/')[f.split('/').index('scenes')+1]
+		if sceneIndex:
+		
+			scene = sixDigitTSA(os.path.basename(f).split("_")[int(sceneIndex)])
+			
+		else:
+	
+			try:
+				scene = f.split('/')[f.split('/').index('scenes')+1]
+				toto = int(scene)
+			except ValueError:
+				scene = os.path.basename(f).split('_')[3]
+				try:
+					toto = int(scene)
+				except ValueError:
+					if len(scene) != 6:
+						print "WARNING: This is not in disturbance map format. Checking to \
+						see if it is an insect map..."
+						scene = sixDigitTSA(os.path.basename(f).split('_')[2])
+						try:
+							toto = int(scene)
+						except ValueError:
+							sys.exit("Cannot find scene number from file: "+ os.path.basename(f)+ 
+							" Found: "+ scene)
+		
 		mask = TSA_MASKS.format(scene)
 		
 		print "\nMasking buffer for: ", f
 		output = os.path.join(outputDir, os.path.splitext(os.path.basename(f))[0] + "_nobuff.bsq")
-		statement = "intersectMask {0} {1} {2} --src_band=ALL --meta='Temp file made from mosaicDisturbanceMaps_nobuffer.py'".format(f, mask, output)
+		statement = "intersectMask {0} {1} {2} --src_band=ALL --meta='Temp file made from\
+		 mosaicDisturbanceMaps_nobuffer.py'".format(f, mask, output)
+
 		if not os.path.exists(output):
 			os.system(statement)
 		if os.path.exists(output):
@@ -160,7 +200,11 @@ def main(inputParams):
 	
 	#parse path-rows and create a list of rasters to mosaic
 	all_files = []
-	pathRows = parsePathrow(pathRows)
+	if pathRows:
+		pathRows = parsePathrow(pathRows)
+	else:
+		pathRows = []
+		
 	for directory in getDirectories(rootDir, searchDir, pathRows):
 		for f in searchDirectory(directory, searchStrings):
 			all_files.append(f)

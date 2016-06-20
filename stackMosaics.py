@@ -13,11 +13,10 @@ ex: python stackMosaics.py brightness.txt wetness.txt greenness.txt composite.bs
 import mosaicDisturbanceMaps_nobuffer as mosaic
 import sys, gdal, shutil
 from gdalconst import *
-from intersectMask import *
-from lthacks import *
+from lthacks.intersectMask import *
+from lthacks.lthacks import *
 from tempfile import mkstemp
 
-SCRIPT_LAST_UPDATED = "9/10/15"
 #define landtrendr bands
 ltbands = [0 for x in range(30)]
 for i in range(1,30): ltbands[i] = 1983 + i
@@ -104,7 +103,8 @@ def main(listOfParams, outpath, yearOverride=None):
 	
 	edithdr(outpath, bands, mosaics)
 	
-	createMetadata(sys.argv, outpath, lastCommit=SCRIPT_LAST_UPDATED)
+	this_script = os.path.abspath(__file__)
+	createMetadata(sys.argv, outpath, lastCommit=getLastCommit(this_script))
 	
 	#clean up
 	if os.path.exists(outpath):
